@@ -50,7 +50,7 @@ const App = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:3000/upload', {
+      const response = await fetch('https://videoeditor-backend.onrender.com/upload', {
         method: 'POST',
         body: formData,
       });
@@ -109,7 +109,7 @@ const App = () => {
         end_time: e1,
       };
 
-      const response = await fetch('http://localhost:3000/trim', {
+      const response = await fetch('https://videoeditor-backend.onrender.com/trim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
