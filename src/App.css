@@ -1,5 +1,4 @@
 
-
 .App {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-align: center;
@@ -14,43 +13,34 @@
   justify-content: center;
   font-size: calc(10px + 2vmin);
   color: white;
+  padding: 2rem;
 }
 
 h2 {
   margin-bottom: 1rem;
 }
 
-input[type="file"] {
+input[type="file"],
+input[type="text"] {
   margin-bottom: 1rem;
   font-size: 1rem;
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   background-color: #2a454b;
+  color: white;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  width: 100%;
+  box-sizing: border-box; 
 }
 
-input[type="file"]:hover {
+input[type="file"]:hover,
+input[type="text"]:hover {
   background-color: #0c5a4f;
 }
 
-.video1 {
-  max-width: 600px; 
-  width: 100%;
-  margin: 0 auto;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.video1 video {
-  width: 100%;
-  height: auto;
-  display: block;
-  background-color: #000;
-  max-width: 100%; 
-}
-
+.video-section,
 .trim-section {
   margin-top: 2rem;
   padding: 1rem;
@@ -61,15 +51,21 @@ input[type="file"]:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.video-section {
+  overflow: hidden; 
+}
+
 .trim-section p {
   margin-bottom: 0.5rem;
   font-size: 1rem;
+  color: #fff; 
 }
 
 label {
   display: block;
   margin-top: 0.5rem;
   font-size: 1rem;
+  color: #fff; 
 }
 
 input[type="range"] {
@@ -101,6 +97,7 @@ button:hover:not(:disabled) {
   margin-top: 1rem;
   font-style: italic;
   font-size: 0.9rem;
+  color: #dc3545; 
 }
 
 .trimmed-url {
