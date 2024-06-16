@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
+import ReactPlayer from 'react-player';
 import { saveAs } from 'file-saver';
 
 const App = () => {
@@ -13,7 +14,11 @@ const App = () => {
   const [message, setMessage] = useState('');
   const [sliderStartTime, setSliderStartTime] = useState(0);
   const [sliderEndTime, setSliderEndTime] = useState(0);
-  const videoRef = useRef(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [cloudinaryUrl, setCloudinaryUrl] = useState('');
+  const [playing, setPlaying] = useState(false);
+
+  const playerRef = useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -25,69 +30,80 @@ const App = () => {
     setUploadedPublicId('');
     setUploadedAssetId('');
     setDuration(0);
+    setCloudinaryUrl('');
 
-    if (file && videoRef.current) {
-      videoRef.current.src = URL.createObjectURL(file);
-      videoRef.current.style.display = 'block';
-      videoRef.current.load();
-    } else {
-      if (videoRef.current) {
-        videoRef.current.src = '';
-        videoRef.current.style.display = 'none';
-      }
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCloudinaryUrl(url);
     }
+  };
+
+  const handleUrlChange = (e) => {
+    setVideoUrl(e.target.value);
+    setMessage('');
+    setTrimmedUrl('');
+    setSliderStartTime(0);
+    setSliderEndTime(0);
+    setUploadedPublicId('');
+    setUploadedAssetId('');
+    setDuration(0);
+    setCloudinaryUrl('');
   };
 
   const handleUpload = async () => {
     try {
-      if (!selectedFile) {
-        alert('Please select a file to upload.');
-        return;
-      }
-
       setUploading(true);
 
-      const formData = new FormData();
-      formData.append('file', selectedFile);
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
 
-      const response = await fetch('https://videoeditor-backend.onrender.com/upload', {
-        method: 'POST',
-        body: formData,
-      });
+        const response = await fetch('http://localhost:3000/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
 
-      const responseData = await response.json();
-      console.log('File uploaded successfully:', responseData);
+        const responseData = await response.json();
+        console.log('File uploaded successfully:', responseData);
 
-      const { public_id, asset_id, url } = responseData.cloudinaryUploadResponse;
+        const { public_id, asset_id, url } = responseData.cloudinaryUploadResponse;
 
-      setUploadedPublicId(public_id);
-      setUploadedAssetId(asset_id);
+        setUploadedPublicId(public_id);
+        setUploadedAssetId(asset_id);
+        setCloudinaryUrl(url);
+      } else if (videoUrl) {
+        const response = await fetch(`http://localhost:3000/video-download1?url=${videoUrl}`);
 
-      // Set video URL directly from Cloudinary
-      if (videoRef.current) {
-        videoRef.current.src = url;
-        videoRef.current.load();
-        videoRef.current.addEventListener('loadedmetadata', handleVideoLoaded);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log('Video URL submitted successfully:', responseData);
+
+        const { public_id, asset_id, url } = responseData.result;
+
+        setUploadedPublicId(public_id);
+        setUploadedAssetId(asset_id);
+        setCloudinaryUrl(url);
+      } else {
+        alert('Please select a file or enter a video URL.');
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      setMessage('Error uploading file');
+      console.error('Error uploading file or submitting URL:', error);
+      setMessage('Error uploading file or submitting URL');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleVideoLoaded = () => {
-    if (videoRef.current && videoRef.current.duration && !isNaN(videoRef.current.duration)) {
-      const videoDuration = videoRef.current.duration;
-      setDuration(videoDuration);
-      setSliderStartTime(0);
-      setSliderEndTime(videoDuration);
-    }
+  const handleDuration = (d) => {
+    setDuration(d);
+    setSliderEndTime(d);
   };
 
   const handleTrim = async () => {
@@ -109,7 +125,7 @@ const App = () => {
         end_time: e1,
       };
 
-      const response = await fetch('https://videoeditor-backend.onrender.com/trim', {
+      const response = await fetch('http://localhost:3000/trim', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,8 +170,8 @@ const App = () => {
     const value = parseFloat(e.target.value);
     if (value <= sliderEndTime) {
       setSliderStartTime(value);
-      if (videoRef.current) {
-        videoRef.current.currentTime = value;
+      if (playerRef.current) {
+        playerRef.current.seekTo(value, 'seconds');
       }
     }
   };
@@ -164,8 +180,8 @@ const App = () => {
     const value = parseFloat(e.target.value);
     if (value >= sliderStartTime) {
       setSliderEndTime(value);
-      if (videoRef.current) {
-        videoRef.current.currentTime = value;
+      if (playerRef.current) {
+        playerRef.current.seekTo(value, 'seconds');
       }
     }
   };
@@ -174,21 +190,32 @@ const App = () => {
     <div className="App">
       <header className="App-header">
         <h2>Video Upload and Trim</h2>
-        <input type="file" onChange={handleFileChange} />
-        <button onClick={handleUpload} disabled={!selectedFile || uploading}>
+        <div>
+          <label>
+            Upload video file:
+            <input type="file" onChange={handleFileChange} />
+          </label>
+        </div>
+        <div>
+          <label>
+            Or enter youtube URL:
+            <input type="text" value={videoUrl} onChange={handleUrlChange} />
+          </label>
+        </div>
+        <button onClick={handleUpload} disabled={!selectedFile && !videoUrl || uploading}>
           {uploading ? 'Uploading...' : 'Upload'}
         </button>
         <br />
-        {selectedFile && (
-          <div className="video1">
-            <video
-            ref={videoRef}
-            controls
-            style={{ display: 'block' }}
-          />
+        {cloudinaryUrl && (
+          <div className="video-section">
+            <ReactPlayer
+              ref={playerRef}
+              url={cloudinaryUrl}
+              controls
+              playing={playing}
+              onDuration={handleDuration}
+            />
           </div>
-
-          
         )}
         {uploadedPublicId && (
           <div className="trim-section">
